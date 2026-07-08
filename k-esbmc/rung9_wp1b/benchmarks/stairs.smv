@@ -1,0 +1,15 @@
+-- stairs_light (the skip/unsound case): a PIR rising edge drives a TOF; the light
+-- = TOF_Q (buttons untouched). Faithful TOF holds the light PT scans after the PIR
+-- clears -> P1 (!light || pir || buttons) is violated. Expect: FALSE (unsafe).
+MODULE main
+VAR pir : boolean; prev_pir : boolean; et : 0..3;
+DEFINE
+  PT    := 3;                       -- benchmark uses 20; violation is preset-independent
+  rise  := pir & !prev_pir;         -- R_TRIG on the PIR
+  Q     := rise | (et < PT);        -- TOF: on while IN, held PT scans after
+  light := Q;                       -- lights_buttons_state = FALSE (buttons idle)
+ASSIGN
+  init(prev_pir) := FALSE; next(prev_pir) := pir;
+  init(et) := PT;
+  next(et) := case rise : 0; et < PT : et+1; TRUE : PT; esac;
+INVARSPEC (light -> pir);           -- P1 with buttons idle

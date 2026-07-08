@@ -5,6 +5,12 @@
 **Reviewed state:** current `ACM/` after WP1a/WP1b/WP2/WP3 edits + K-ESBMC rename
 **Supersedes:** `tosem-review.md` (v1), written pre-edits.
 
+> **Revision status (applied after this review):** M1 addressed (NuSMV now corroborates
+> both decisive benchmarks, `k-esbmc/rung9_wp1b/benchmarks/`), M2/M3/m1/m2/m3 fixed in the
+> paper text. **Remaining: anonymization (gating), M4 (confirm family numbers under `krun`),
+> and the CBMC half of M1 (needs MATIEC-compiled benchmark C / PLCopen XML).** M5 was already
+> honestly scoped — no change needed. See "Revision log" at the end.
+
 ---
 
 ## What changed since v1 (and what it fixed)
@@ -140,3 +146,23 @@ Blocking/high-value, in order:
 | Related work fair/correct | ✅ (add `Cavada2014`) |
 | CCS + ACM ref format | ✅ |
 | LaTeX/bib consistency | ✅ (verified) |
+
+---
+
+## Revision log (fixes applied to the paper)
+
+| Item | Action taken |
+| --- | --- |
+| **M1** — multi-engine only on probe | **Addressed.** NuSMV now checks faithful models of the two decisive benchmarks: `traffic_light` proved SAFE (unbounded), `stairs_light` UNSAFE (P1) — matching K-ESBMC vs ESBMC on the real programs (§4.3; `k-esbmc/rung9_wp1b/benchmarks/`). *CBMC on the real benchmarks still needs MATIEC-compiled C / PLCopen XML — remaining.* |
+| **M2** — "four independent accounts" overstated | **Fixed.** §4.3 now states the corroboration is independent in *decision procedure* only — OpenPLC + MATIEC-CBMC share MATIEC (K-ESBMC's own validation basis) and NuSMV encodes the same faithful timer; ESBMC is the lone independent front-end. Abstract softened to "unrelated decision procedures." |
+| **M3** — "silently" vs "warns" | **Fixed.** §1.4 now: the front-end "drops the timer — flagging it as unmodeled, yet still reporting the program verified." |
+| **M4** — confirm family numbers under krun | **Open (author action).** Regenerate `tab:e3:family` via `rung6/differential.py` under K. |
+| **M5** — RQ4 excludes timers | **No change needed** — already honestly scoped in §3.4. |
+| **m1** — Table 3 vs Table 5 count | **Fixed.** §4.3: "three disagreeing runs … reduce to two defect classes on two distinct programs." |
+| **m2** — abstract grammar | **Fixed.** Opening sentence rewritten. |
+| **m3** — `Cavada2014` uncited | **Fixed.** Cited at "SMV/nuXmv-based flows." |
+| **Anonymization** | **Open (gating, submission-time).** Switch to anonymous mode, strip author block/self-citations. |
+
+**Net after fixes:** blocking items reduce to **anonymization** (submission-time) and **M4**
+(regenerate under `krun`). The evaluation-framing majors (M1/M2/M3) are resolved. Post-fix
+posture: **Minor Revision** in substance, with anonymization the one remaining gate.
