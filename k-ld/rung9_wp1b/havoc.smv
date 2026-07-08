@@ -1,0 +1,8 @@
+-- Havoc timer (the ESBMC simple-format defect): the done bit is unconstrained.
+MODULE main
+VAR
+  Btn   : boolean;
+  Qfree : boolean;        -- timer output left free -> the false alarm
+DEFINE
+  Light := Qfree;
+INVARSPEC (Light -> Btn);

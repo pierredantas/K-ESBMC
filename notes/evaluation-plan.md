@@ -1,4 +1,4 @@
-# K-LD — Evaluation-Broadening Plan (TOSEM)
+# K-ESBMC — Evaluation-Broadening Plan (TOSEM)
 
 **Goal.** Convert the paper's weakest dimension — a differential built on a *single*,
 in-group verifier over 13 programs — into a strength, so the central methodological claim
@@ -11,9 +11,9 @@ Each work package (WP) closes a named weakness from the peer review (`tosem-revi
 | WP | Kills | One-line | Effort | Priority |
 | --- | --- | --- | --- | --- |
 | **WP1a** | W5 | Second verification path: MATIEC-C + CBMC | S | **P0 (executed, real tools)** |
-| **WP1b** | W5 | Genuinely independent verifier: PLCverif / Arcade.PLC | L | **P0** |
-| **WP2** | W5b | Grow + *characterize* the benchmark corpus (13 → ~35–45) | M | **P1** |
-| **WP3** | W8 | Real fault-injection campaign (fix inert operators; mutate the translator) | M | **P1** |
+| **WP1b** | W5, W7 | Independent engine: NuSMV (BDD). PLCverif ruled out (Siemens-only), Arcade.PLC defunct | M | **P0 (executed, NuSMV)** |
+| **WP2** | W5b | Grow + *characterize* the benchmark corpus (13 → 28, synthetic family) | M | **P1 (done: family + coverage matrix, labels NuSMV-checked)** |
+| **WP3** | W8 | Fault-injection over the WP2 family: inert operators now fire; per-operator rates | M | **P1 (done: 87 mutants, LR/TK firing, oracle RQ1+NuSMV-validated)** |
 | **WP4a** | W7 | Horizon-scaling + sequence-dependent violations | S | P2 |
 | **WP4b** | W3 | Second-runtime cross-check (break the shared MATIEC ground truth) | S | P2 |
 
@@ -25,12 +25,12 @@ Where the work lands in the repo: `k-ld/validation` (RQ1), `k-ld/rung6` (E3 diff
 ## WP1a — MATIEC-C + CBMC as an independent second verifier  · kills W5 · **prototyped**
 
 **What.** Add the path `PLCopen XML --[MATIEC iec2c]--> C --[CBMC]--> SAFE/VIOLATED`. MATIEC's
-LD→C lowering differs from **both** ESBMC-PLC's LD→GOTO and K-LD's `plcopen2kld.py`, so it is
+LD→C lowering differs from **both** ESBMC-PLC's LD→GOTO and K-ESBMC's `plcopen2kld.py`, so it is
 an independent second opinion — and reuses the *same* OpenPLC container RQ1 already trusts
 (`validation/run.sh`), adding no new trusted component.
 
 **Why it's high-value / low-cost.** On the three disagreements MATIEC-C+CBMC should side with
-K-LD (MATIEC models timers faithfully), so RQ3 becomes "corroborated by **two** independent
+K-ESBMC (MATIEC models timers faithfully), so RQ3 becomes "corroborated by **two** independent
 engines plus the runtime tie-breaker" instead of one oracle. Almost no new tooling: the
 compile path already exists in the container.
 
@@ -39,12 +39,12 @@ compile path already exists in the container.
   generators. Validated locally.
 - `matiec_cbmc/` — **real `iec2c` (built from `thiagoralves/matiec`) → real MATIEC-generated
   C → real CBMC 6.10**: faithful scan-TON proves property A **SUCCESSFUL** (siding with
-  K-LD); havoc timer → property A **FAILED** (the ESBMC false alarm). See
+  K-ESBMC); havoc timer → property A **FAILED** (the ESBMC false alarm). See
   `matiec_cbmc/RESULTS.md`. The mechanism is demonstrated on genuine MATIEC codegen.
 - `smoke/` — the same result under real CBMC on the paper's probe, isolating the harness core.
 
 **Remaining to land it on the paper's benchmarks (needs Docker + original XML):**
-1. Obtain the original **PLCopen XML** benchmarks (the repo's `.ld` are already K-LD DSL).
+1. Obtain the original **PLCopen XML** benchmarks (the repo's `.ld` are already K-ESBMC DSL).
 2. Run `run_wp1a.sh` (container `iec2c`, which loads the standard-FB library so the wall-clock
    `TON` body is used — a local bison-3.x `iec2c` does not load that library; the
    `matiec_cbmc/` demo therefore expresses the timer as the equivalent scan-counting ST).
@@ -57,24 +57,28 @@ the tool under test."*
 
 ---
 
-## WP1b — A genuinely independent LD verifier  · kills W5 (the generality claim itself)
+## WP1b — An independent verification engine  · kills W5, buys down W7  · **executed (NuSMV)**
 
-**What.** Run **PLCverif** (CERN) and/or **Arcade.PLC** (RWTH) — the very tools tabulated in
-Table 1 — through the differential harness, at minimum on the timer subset.
+**Intended.** A genuinely independent *front-end* — **PLCverif** (CERN) / **Arcade.PLC** (RWTH)
+— run through the differential, to answer: do *other* verifiers also skip/havoc timers?
 
-**The question it answers.** Do *other* verifiers also skip/havoc timers, or model them
-correctly? Both outcomes strengthen the paper:
-- *They get timers right* → K-LD pinpoints an ESBMC-specific bug (precision of the oracle).
-- *They also fail* → the defect is endemic and the field needs this oracle (impact).
+**What actually happened.** Neither third-party tool was usable: **PLCverif's only PLC
+front-end is Siemens Step7 (SCL/STL)** — it cannot ingest our PLCopen XML LD without an
+LD→STL translator (another trusted front-end, defeating the point); **Arcade.PLC is no longer
+distributed** (tool page 404). Documented in `k-ld/rung9_wp1b/PLCVERIF.md`.
 
-**Effort / risk — the honest part.** The friction is input format: PLCverif is
-Siemens-SCL/STL-oriented; Arcade.PLC imports IL/ST/LD. A PLCopen-XML→(tool input) bridge is
-required; if a tool can't ingest LD cleanly, **report that** — front-end fragmentation across
-verifiers is itself part of the motivation. Budget the most time here; it is the single
-highest-impact addition and the one a reviewer will explicitly ask for.
+**Fallback executed.** An independent *engine*: **NuSMV** (BDD symbolic model checking) on the
+timer probe. Faithful scan-TON → invariant `Light → Btn` **true** (proved, **unbounded**);
+havoc → **false** with counterexample. So three engines — K-ESBMC (reachability), MATIEC-C+CBMC
+(SAT-BMC, WP1a), NuSMV (BDD, WP1b) — agree against ESBMC, and NuSMV's unbounded proof also
+buys down the bounded-horizon threat (W7). Implemented in `k-ld/rung9_wp1b/`.
 
-**Deliverable.** Extend Table 3 to a multi-verifier matrix (rows = programs, columns =
-ESBMC-PLC / MATIEC-C+CBMC / PLCverif / Arcade.PLC / K-LD-oracle / OpenPLC-tiebreak).
+**Honest boundary.** Independent *engine*, not independent *front-end*: it rules out a
+BMC-specific artifact but does not test another tool's timer handling. A third-party LD
+verifier remains the strongest future extension; the harness is ready to accept its verdicts.
+
+**Deliverable.** Extend Table 3 to a multi-engine matrix (columns = ESBMC-PLC / K-ESBMC /
+MATIEC-C+CBMC / NuSMV / OpenPLC-tiebreak).
 
 ---
 
@@ -93,6 +97,16 @@ not raw N).
 **Deliverable.** A coverage table (programs × {contacts, latch, TON/TOF/TP, CTU/CTD, edge,
 format, property-kind}) proving systematic — not lucky — coverage.
 
+**Status — done (synthetic family).** Implemented in `k-ld/rung10_wp2/`: a generator
+(`gen_family.py`) emits **15 programs** (corpus 13 → 28) as `.ld`/`.json`/`.props.yaml`
+triples in the harness's format, plus `coverage.md` — the programs × constructs ×
+property-kinds matrix (every construct column ≥1 program; all three property kinds; 13
+safe / 2 unsafe-under-faithful-timer). Ready to run through `rung6/differential.py` under K.
+Labels independently confirmed for three representative members (one per property kind,
+both verdicts) with real NuSMV (`validate/`): `ton_chain2` safe, `tof_hold` unsafe,
+`ctu_saturate` safe — all matched. Not yet done: external real-world corpus (OSCAT/PLCopen/
+MATIEC suite) and graphical-format variants — mechanical follow-ups.
+
 ---
 
 ## WP3 — A real fault-injection campaign  · kills W8
@@ -103,12 +117,22 @@ Current study (`rung7`): 2 benchmarks, 60 mutants, latch operator never fires, t
 1. **Feed the inert operators** — include latch-heavy and timer-heavy programs (draw from
    WP2) so all five operators fire across many mutants.
 2. **Stronger variant — mutate the *translator*, not the diagram.** Inject single-point faults
-   into ESBMC-PLC's LD→GOTO code (or the front-ends) and measure the fraction K-LD's
+   into ESBMC-PLC's LD→GOTO code (or the front-ends) and measure the fraction K-ESBMC's
    whole-behavior oracle catches vs. the fraction the shipped property suites catch. This is a
    far sharper statement of the property-adequacy gap and is squarely TOSEM-flavored
    (mutation testing of a translation).
 3. **Report per-operator detection rates** over hundreds of mutants with confidence intervals.
    The 27% figure becomes a defensible curve, not an anecdote.
+
+**Status — done (fix 1 + fix 3).** Implemented in `k-ld/rung11_wp3/`: rung7's five operators
+run over the WP2 family → **87 mutants**, with per-operator detection (`RESULTS.md`). The
+previously-inert operators now fire — **LR 4× (was 0), TK 5× (was 1)**. Property-adequacy gap
+confirmed: 73 behavior-changing mutants, only 44% property-detected (27% on the real
+benchmarks) — even properties *designed to observe* the construct miss most faults. Measured
+with `ld_exec`, a faithful scan-cycle executor **validated** against the RQ1 reference traces
+(Table 2) and the WP2 labels, and agreeing with NuSMV on three members (`validate_exec.py`);
+the canonical run is `differential.py` under K. **Fix 2** (mutate ESBMC's LD→GOTO code itself)
+needs the ESBMC toolchain and remains future work.
 
 ---
 
