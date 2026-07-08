@@ -1,0 +1,26 @@
+-- traffic_light (the havoc/false-alarm case): a 4-TON chain sequences one-hot
+-- phases (NS green/yellow, EW green/yellow). NS_Green and EW_Green are distinct
+-- phases, so a faithful (sequenced) chain never lights both. Expect: TRUE (safe).
+MODULE main
+VAR
+  Enable : boolean; Emergency : boolean;
+  phase  : {idle, NSG, NSY, EWG, EWY};
+  et     : 0..2;
+DEFINE
+  PT       := 2;
+  NS_Green := (phase = NSG) & !Emergency;
+  EW_Green := (phase = EWG);
+ASSIGN
+  init(phase) := idle;
+  next(phase) := case
+    !Enable | Emergency        : idle;
+    phase = idle               : NSG;
+    (phase = NSG) & (et >= PT) : NSY;
+    (phase = NSY) & (et >= PT) : EWG;
+    (phase = EWG) & (et >= PT) : EWY;
+    (phase = EWY) & (et >= PT) : NSG;
+    TRUE                       : phase;
+  esac;
+  init(et) := 0;
+  next(et) := case next(phase) != phase : 0; et < PT : et+1; TRUE : et; esac;
+INVARSPEC !(NS_Green & EW_Green);   -- green-conflict mutual exclusion
