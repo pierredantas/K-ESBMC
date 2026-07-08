@@ -11,7 +11,7 @@ Each work package (WP) closes a named weakness from the peer review (`tosem-revi
 | WP | Kills | One-line | Effort | Priority |
 | --- | --- | --- | --- | --- |
 | **WP1a** | W5 | Second verification path: MATIEC-C + CBMC | S | **P0 (executed, real tools)** |
-| **WP1b** | W5 | Genuinely independent verifier: PLCverif / Arcade.PLC | L | **P0** |
+| **WP1b** | W5, W7 | Independent engine: NuSMV (BDD). PLCverif ruled out (Siemens-only), Arcade.PLC defunct | M | **P0 (executed, NuSMV)** |
 | **WP2** | W5b | Grow + *characterize* the benchmark corpus (13 → ~35–45) | M | **P1** |
 | **WP3** | W8 | Real fault-injection campaign (fix inert operators; mutate the translator) | M | **P1** |
 | **WP4a** | W7 | Horizon-scaling + sequence-dependent violations | S | P2 |
@@ -57,24 +57,28 @@ the tool under test."*
 
 ---
 
-## WP1b — A genuinely independent LD verifier  · kills W5 (the generality claim itself)
+## WP1b — An independent verification engine  · kills W5, buys down W7  · **executed (NuSMV)**
 
-**What.** Run **PLCverif** (CERN) and/or **Arcade.PLC** (RWTH) — the very tools tabulated in
-Table 1 — through the differential harness, at minimum on the timer subset.
+**Intended.** A genuinely independent *front-end* — **PLCverif** (CERN) / **Arcade.PLC** (RWTH)
+— run through the differential, to answer: do *other* verifiers also skip/havoc timers?
 
-**The question it answers.** Do *other* verifiers also skip/havoc timers, or model them
-correctly? Both outcomes strengthen the paper:
-- *They get timers right* → K-LD pinpoints an ESBMC-specific bug (precision of the oracle).
-- *They also fail* → the defect is endemic and the field needs this oracle (impact).
+**What actually happened.** Neither third-party tool was usable: **PLCverif's only PLC
+front-end is Siemens Step7 (SCL/STL)** — it cannot ingest our PLCopen XML LD without an
+LD→STL translator (another trusted front-end, defeating the point); **Arcade.PLC is no longer
+distributed** (tool page 404). Documented in `k-ld/rung9_wp1b/PLCVERIF.md`.
 
-**Effort / risk — the honest part.** The friction is input format: PLCverif is
-Siemens-SCL/STL-oriented; Arcade.PLC imports IL/ST/LD. A PLCopen-XML→(tool input) bridge is
-required; if a tool can't ingest LD cleanly, **report that** — front-end fragmentation across
-verifiers is itself part of the motivation. Budget the most time here; it is the single
-highest-impact addition and the one a reviewer will explicitly ask for.
+**Fallback executed.** An independent *engine*: **NuSMV** (BDD symbolic model checking) on the
+timer probe. Faithful scan-TON → invariant `Light → Btn` **true** (proved, **unbounded**);
+havoc → **false** with counterexample. So three engines — K-LD (reachability), MATIEC-C+CBMC
+(SAT-BMC, WP1a), NuSMV (BDD, WP1b) — agree against ESBMC, and NuSMV's unbounded proof also
+buys down the bounded-horizon threat (W7). Implemented in `k-ld/rung9_wp1b/`.
 
-**Deliverable.** Extend Table 3 to a multi-verifier matrix (rows = programs, columns =
-ESBMC-PLC / MATIEC-C+CBMC / PLCverif / Arcade.PLC / K-LD-oracle / OpenPLC-tiebreak).
+**Honest boundary.** Independent *engine*, not independent *front-end*: it rules out a
+BMC-specific artifact but does not test another tool's timer handling. A third-party LD
+verifier remains the strongest future extension; the harness is ready to accept its verdicts.
+
+**Deliverable.** Extend Table 3 to a multi-engine matrix (columns = ESBMC-PLC / K-LD /
+MATIEC-C+CBMC / NuSMV / OpenPLC-tiebreak).
 
 ---
 

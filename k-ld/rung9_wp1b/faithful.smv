@@ -1,0 +1,19 @@
+-- Faithful scan-TON (K-LD semantics): elapsed resets when IN low, so the done
+-- bit Q can only be high while Btn is high this scan. Property A: Light -> Btn.
+MODULE main
+VAR
+  Btn     : boolean;      -- input, nondeterministic each scan
+  et_prev : 0..3;         -- elapsed carried from previous scan
+DEFINE
+  PT     := 3;
+  et_cur := case
+              !Btn         : 0;
+              et_prev < PT : et_prev + 1;
+              TRUE         : et_prev;         -- saturate at PT
+            esac;
+  Q      := et_cur >= PT;
+  Light  := Q;
+ASSIGN
+  init(et_prev) := 0;
+  next(et_prev) := et_cur;
+INVARSPEC (Light -> Btn);
