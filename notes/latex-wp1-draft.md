@@ -123,6 +123,19 @@ every \emph{disagreement} is a genuine \gls{esbmc} defect that \kesbmc{} exposes
 
 ---
 
+## Edit 8 — `_sec_text.tex`, §5 Related Work: PLCverif/Arcade.PLC footnote
+
+**Find:**
+```latex
+it is the reference oracle against which such a translation can be scrutinized, and we apply it to \esbmcplc{}.
+```
+**Replace with:**
+```latex
+it is the reference oracle against which such a translation can be scrutinized, and we apply it to \esbmcplc{}.\footnote{We apply the differential to \esbmcplc{} rather than to these other tools because none can ingest our PLCopen~XML \gls{ld} benchmarks without a further trusted translation: PLCverif's only \gls{plc} front-end targets Siemens Step7 (\acrshort{scl}/STL), and Arcade.PLC is no longer distributed. We instead corroborate the disagreements with verification engines whose decision procedures are independent of \kesbmc{} (\S\ref{sec:e3:rq3}).}
+```
+
+---
+
 ## Application order / checklist
 1. Add the bib entry (Edit 6) first so the `\cite{Cimatti2002nusmv}` in Edit 2 resolves.
 2. Apply Edits 1–3 (the substantive RQ3 + threats changes).
